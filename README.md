@@ -106,25 +106,17 @@ Respond ONLY with a valid JSON object of this exact shape:
 
 ## Screenshots
 
-> The images below live in the `docs/screenshots/` folder. Create that folder, drop in your PNG/JPG captures using the exact filenames shown, and they will render automatically on GitHub and most markdown viewers.
-
 ### 1. Landing & Onboarding
-![DoseWise landing page with branded hero and call to action](docs/screenshots/01-landing.png)
+![DoseWise landing page with branded hero and call to action](./image.png)
 
-### 2. Dosing Workspace — Patient Intake
-![DoseWise patient intake form with live BMI, BSA, and CrCl metrics](docs/screenshots/02-calculator.png)
+### 2. Core Features & Clinical Capabilities
+![DoseWise feature showcase highlighting clinical metrics and reasoning](./image-1.png)
 
-### 3. AI-Powered Dosing Recommendation
-![DoseWise structured recommendation card with dose, adjustments, and warnings](docs/screenshots/03-recommendation.png)
+### 3. Dosing Workspace & Calculation History
+![DoseWise patient intake form with live BMI, BSA, and CrCl metrics alongside history](./image-2.png)
 
-### 4. Calculation History
-![DoseWise calculation history table listing past dosing calculations](docs/screenshots/04-history.png)
-
-**How to add your screenshots:**
-1. Create a folder at the project root: `docs/screenshots/`.
-2. Take screenshots of each view (landing, calculator, recommendation, history).
-3. Save them with the exact filenames referenced above (`01-landing.png`, `02-calculator.png`, `03-recommendation.png`, `04-history.png`).
-4. Commit the folder — the images will then display in this README.
+### 4. AI-Powered Dosing Recommendation
+![DoseWise structured recommendation card with dose, adjustments, and warnings](./image-3.png)
 
 ---
 
