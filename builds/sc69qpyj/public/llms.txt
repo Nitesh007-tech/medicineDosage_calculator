@@ -1,0 +1,9 @@
+# DoseWise
+
+> A patient-aware clinical drug dosing calculator for pharmacy staff and clinical pharmacists.
+
+DoseWise is a web-based clinical decision support tool that helps pharmacy staff compute accurate, patient-specific drug doses. Users enter patient demographics (age, sex, height, weight, serum creatinine), comorbidities, allergies, and current medications. The app auto-calculates BMI, BSA (Mosteller formula), and creatinine clearance (Cockcroft-Gault), then sends the full patient profile to an AI model (Anthropic Claude) which returns a structured dosing recommendation — including weight-based or BSA-based dose, renal/hepatic adjustments, allergy/contraindication warnings, and a mandatory professional verification disclaimer. Every calculation is stored in a history log for reference. DoseWise is not a substitute for professional clinical judgment.
+
+## Pages
+
+- / — Home / Dosing Calculator: The main patient intake form with live metric calculations, drug selector, AI-powered dosing recommendation card, and calculation history table.
