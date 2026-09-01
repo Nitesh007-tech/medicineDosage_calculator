@@ -1,7 +1,8 @@
 import "dotenv/config";
 import express, { Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { serveStatic, log } from "./vite";
 
 const app = express();
 
@@ -9,7 +10,7 @@ const app = express();
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: false, limit: "25mb" }));
 
-// Logging middlewaredeve
+// Logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   let capturedJson: any;
@@ -34,69 +35,76 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Add health check endpoint before registerRoutes
+// Add health check endpoint
 app.get("/api/health", (req: Request, res: Response) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
+    environment: process.env.NODE_ENV || "production",
     uptime: process.uptime(),
-    version: process.env.npm_package_version || "1.0.0",
   });
 });
 
-// Start the server
-async function startServer() {
-  try {
-    // Register API routes FIRST
-    const server = await registerRoutes(app);
+// Initialize server
+let httpServer: any = null;
 
-    // Error handler
+async function initializeServer() {
+  try {
+    // Register API routes
+    httpServer = await registerRoutes(app);
+
+    // Error handler (must be last middleware)
     app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+      console.error("Request error:", err);
       const status = err.status || 500;
       const message = err.message || "Internal Server Error";
       res.status(status).json({ message });
-      throw err;
     });
 
-    // CRITICAL: Setup Vite/static serving AFTER API routes
-    // This ensures the catch-all route doesn't interfere with API endpoints
-    const nodeEnv = process.env.NODE_ENV || app.get("env");
-
-    if (nodeEnv === "production") {
+    // Setup static file serving (frontend)
+    try {
       await serveStatic(app);
-    } else if (nodeEnv === "development") {
-      await setupVite(app, server);
-    } else {
-      await serveStatic(app);
+    } catch (serveErr) {
+      console.warn("⚠️ Static file serving failed (frontend build missing?):", serveErr);
+      // Continue anyway - API routes will still work
+      app.use("/*", (req, res) => {
+        res.status(503).json({ 
+          error: "Frontend unavailable",
+          message: "The frontend build files are missing. Please rebuild."
+        });
+      });
     }
 
-    // Single port serves everything
-    const PORT = process.env.PORT || 3000;
-    if (!process.env.PORT) {
-      console.log("⚠️  .env not loaded or PORT not set");
-    }
-
-    server.listen(
-      {
-        port: PORT,
-        host: "0.0.0.0",
-        reusePort: true,
-      },
-      () => {
-  log(`🚀 Joylo fullstack app running on port ${PORT}`);
-        log(`Environment: ${nodeEnv}`);
-        if (nodeEnv === "development") {
-          log("Frontend served via Vite dev server");
-        } else {
-          log("Frontend served as static files");
-        }
-      }
-    );
+    log("✅ Server initialized successfully");
   } catch (err) {
-    console.error("❌ Failed to start server:", err);
-    process.exit(1);
+    console.error("❌ Failed to initialize server:", err);
+    throw err;
   }
 }
 
-startServer();
+// For local development only
+if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+  initializeServer().then(() => {
+    const PORT = process.env.PORT || 3000;
+    httpServer?.listen(
+      {
+        port: PORT,
+        host: "0.0.0.0",
+      },
+      () => {
+        log(`🚀 Server running on port ${PORT}`);
+      }
+    );
+  });
+}
+
+// Export app for both Vercel and local use
+export default app;
+
+// Explicit handler export for Vercel Serverless Functions
+export async function handler(req: Request, res: Response) {
+  if (!httpServer) {
+    await initializeServer();
+  }
+  return app(req, res);
+}
