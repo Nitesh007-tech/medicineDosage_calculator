@@ -48,14 +48,12 @@ const Index = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/history"] });
     },
-    meta: {
-      onError: (error: unknown) => {
-        toast({
-          title: "Failed to clear history",
-          description: String(error),
-          variant: "destructive",
-        });
-      },
+    onError: (error: unknown) => {
+      toast({
+        title: "Failed to clear history",
+        description: String(error),
+        variant: "destructive",
+      });
     },
   });
 
@@ -98,7 +96,8 @@ const Index = () => {
       const dose: DosingResult = await res.json();
 
       if (!dose.missing_field) {
-        await apiRequest("/api/history", {
+        // Fire-and-forget: history save failure must never block the dose result
+        apiRequest("/api/history", {
           method: "POST",
           body: JSON.stringify({
             patientId: data.patientId,
@@ -106,7 +105,7 @@ const Index = () => {
             doseGiven: dose.recommended_dose,
             result: dose,
           }),
-        });
+        }).catch((err) => console.warn("[history save]", err));
       }
 
       return dose;
@@ -115,14 +114,12 @@ const Index = () => {
       setResult(dose);
       queryClient.invalidateQueries({ queryKey: ["/api/history"] });
     },
-    meta: {
-      onError: (error: unknown) => {
-        toast({
-          title: "Failed to compute dose",
-          description: String(error),
-          variant: "destructive",
-        });
-      },
+    onError: (error: unknown) => {
+      toast({
+        title: "Failed to compute dose",
+        description: String(error),
+        variant: "destructive",
+      });
     },
   });
 
