@@ -12,6 +12,7 @@ import HistoryTable from "@/components/HistoryTable";
 import { PatientData, DosingResult, HistoryEntry } from "@/lib/types";
 import { getDrug } from "@/lib/drugs";
 import { calcBMI, calcBSA } from "@/lib/calculators";
+import { computeDosing } from "@/lib/dosingEngine";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ClipboardList } from "lucide-react";
@@ -89,11 +90,17 @@ const Index = () => {
         drug,
       };
 
-      const res = await apiRequest("/api/dose", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      const dose: DosingResult = await res.json();
+      let dose: DosingResult;
+      try {
+        const res = await apiRequest("/api/dose", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        dose = await res.json();
+      } catch (error) {
+        console.warn("[API dose failed] Falling back to local dosing engine:", error);
+        dose = computeDosing(data, crcl);
+      }
 
       if (!dose.missing_field) {
         // Fire-and-forget: history save failure must never block the dose result

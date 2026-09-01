@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 
-import { insertUserSchema, insertCalculationSchema } from "@shared/schema";
+import { insertUserSchema, insertCalculationSchema } from "../shared/schema";
 import { storage } from "./storage";
 import uploadRoutes from "./upload.route";
 
