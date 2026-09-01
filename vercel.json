@@ -1,28 +1,24 @@
 {
-    "services": {
-        "frontend": {
-            "root": ".",
-            "framework": "vite"
-        },
-        "backend": {
-            "root": "backend",
-            "entrypoint": "index.ts"
-        }
-    },
-    "rewrites": [
+    "builds": [
         {
-            "source": "/api(/.*)?",
-            "destination": {
-                "type": "service",
-                "service": "backend"
-            }
-        },
-        {
-            "source": "/(.*)",
-            "destination": {
-                "type": "service",
-                "service": "frontend"
+            "src": "backend/server.ts",
+            "use": "@vercel/node",
+            "config": {
+                "nodeVersion": "20.x"
             }
         }
-    ]
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "backend/server.ts"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "backend/server.ts"
+        }
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    }
 }
