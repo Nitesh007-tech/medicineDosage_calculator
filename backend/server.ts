@@ -1,9 +1,9 @@
 import "dotenv/config";
 import express, { Request, Response, NextFunction } from "express";
-import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { serveStatic, log } from "./vite";
 
+// Initialize app
 const app = express();
 
 // Basic middleware
@@ -35,82 +35,70 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Add health check endpoint
+// Health check
 app.get("/api/health", (req: Request, res: Response) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "production",
-    uptime: process.uptime(),
   });
 });
 
-// Initialize server
-let httpServer: any = null;
-let initPromise: Promise<void> | null = null;
+// Initialize middleware once
+let middlewareInitialized = false;
 
-async function initializeServer() {
-  if (initPromise) return initPromise;
+async function initializeMiddleware() {
+  if (middlewareInitialized) return;
+  
+  try {
+    // Register routes
+    await registerRoutes(app);
 
-  initPromise = (async () => {
+    // Error handler
+    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+      console.error("Error:", err);
+      const status = err.status || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+    });
+
+    // Static serving
     try {
-      // Register API routes
-      httpServer = await registerRoutes(app);
-
-      // Error handler (must be last middleware)
-      app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-        console.error("Request error:", err);
-        const status = err.status || 500;
-        const message = err.message || "Internal Server Error";
-        res.status(status).json({ message });
+      await serveStatic(app);
+    } catch (err) {
+      console.warn("Static serving setup failed:", err);
+      app.use("/*", (req, res) => {
+        res.status(503).json({ error: "Frontend unavailable" });
       });
 
-      // Setup static file serving (frontend)
-      try {
-        await serveStatic(app);
-      } catch (serveErr) {
-        console.warn("⚠️ Static file serving failed (frontend build missing?):", serveErr);
-        // Continue anyway - API routes will still work
-        app.use("/*", (req, res) => {
-          res.status(503).json({ 
-            error: "Frontend unavailable",
-            message: "The frontend build files are missing. Please rebuild."
-          });
-        });
-      }
-
-      log("✅ Server initialized successfully");
-    } catch (err) {
-      console.error("❌ Failed to initialize server:", err);
-      throw err;
-    }
-  })();
-  return initPromise;
+    middlewareInitialized = true;
+    log("✅ Middleware initialized");
+  } catch (err) {
+    console.error("❌ Failed to initialize middleware:", err);
+    throw err;
+  }
 }
 
-// For local development only
+// Local development server
 if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
-  initializeServer().then(() => {
+  initializeMiddleware().then(() => {
     const PORT = process.env.PORT || 3000;
-    httpServer?.listen(
-      {
-        port: PORT,
-        host: "0.0.0.0",
-      },
-      () => {
-        log(`🚀 Server running on port ${PORT}`);
-      }
-    );
+    app.listen(PORT, "0.0.0.0", () => {
+      log(`🚀 Development server running on port ${PORT}`);
+    });
+  }).catch(err => {
+    console.error("Failed to start dev server:", err);
+    process.exit(1);
   });
 }
 
-// Export app for local use
-export { app };
-
-// Explicit handler export for Vercel Serverless Functions
-export default async function handler(req: Request, res: Response) {
-  if (!httpServer) {
-    await initializeServer();
+// Vercel Serverless Handler - CRITICAL
+export default async (req: Request, res: Response) => {
+  try {
+    await initializeMiddleware();
+    return app(req, res);
+  } catch (error) {
+    console.error("Handler error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
-  app(req, res);
-}
+};

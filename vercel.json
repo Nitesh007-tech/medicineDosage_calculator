@@ -15,5 +15,14 @@
             "source": "/api/(.*)",
             "destination": "/api"
         }
-    ]
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    },
+    "functions": {
+        "backend/server.ts": {
+            "maxDuration": 60,
+            "memory": 1024
+        }
+    }
 }
