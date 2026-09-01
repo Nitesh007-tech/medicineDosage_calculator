@@ -47,39 +47,45 @@ app.get("/api/health", (req: Request, res: Response) => {
 
 // Initialize server
 let httpServer: any = null;
+let initPromise: Promise<void> | null = null;
 
 async function initializeServer() {
-  try {
-    // Register API routes
-    httpServer = await registerRoutes(app);
+  if (initPromise) return initPromise;
 
-    // Error handler (must be last middleware)
-    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-      console.error("Request error:", err);
-      const status = err.status || 500;
-      const message = err.message || "Internal Server Error";
-      res.status(status).json({ message });
-    });
-
-    // Setup static file serving (frontend)
+  initPromise = (async () => {
     try {
-      await serveStatic(app);
-    } catch (serveErr) {
-      console.warn("⚠️ Static file serving failed (frontend build missing?):", serveErr);
-      // Continue anyway - API routes will still work
-      app.use("/*", (req, res) => {
-        res.status(503).json({ 
-          error: "Frontend unavailable",
-          message: "The frontend build files are missing. Please rebuild."
-        });
-      });
-    }
+      // Register API routes
+      httpServer = await registerRoutes(app);
 
-    log("✅ Server initialized successfully");
-  } catch (err) {
-    console.error("❌ Failed to initialize server:", err);
-    throw err;
-  }
+      // Error handler (must be last middleware)
+      app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+        console.error("Request error:", err);
+        const status = err.status || 500;
+        const message = err.message || "Internal Server Error";
+        res.status(status).json({ message });
+      });
+
+      // Setup static file serving (frontend)
+      try {
+        await serveStatic(app);
+      } catch (serveErr) {
+        console.warn("⚠️ Static file serving failed (frontend build missing?):", serveErr);
+        // Continue anyway - API routes will still work
+        app.use("/*", (req, res) => {
+          res.status(503).json({ 
+            error: "Frontend unavailable",
+            message: "The frontend build files are missing. Please rebuild."
+          });
+        });
+      }
+
+      log("✅ Server initialized successfully");
+    } catch (err) {
+      console.error("❌ Failed to initialize server:", err);
+      throw err;
+    }
+  })();
+  return initPromise;
 }
 
 // For local development only
@@ -98,13 +104,13 @@ if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
   });
 }
 
-// Export app for both Vercel and local use
-export default app;
+// Export app for local use
+export { app };
 
 // Explicit handler export for Vercel Serverless Functions
-export async function handler(req: Request, res: Response) {
+export default async function handler(req: Request, res: Response) {
   if (!httpServer) {
     await initializeServer();
   }
-  return app(req, res);
+  app(req, res);
 }

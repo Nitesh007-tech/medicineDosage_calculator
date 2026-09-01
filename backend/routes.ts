@@ -187,17 +187,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/upload", uploadRoutes);
 
   // User routes
-  app.get("/api/users", async (req, res) => {
+  app.get("/api/users", async (req, res, next) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
-      res.status(500).json({ message: "Failed to fetch users" });
+      next(error);
     }
   });
 
-  app.post("/api/users", async (req, res) => {
+  app.post("/api/users", async (req, res, next) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
       const user = await storage.createUser(validatedData);
@@ -211,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       console.error("Error creating users:", error);
-      res.status(500).json({ message: "Failed to create user" });
+      next(error);
       return;
     }
   });
@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Dosing recommendation — uses Claude when a key is present,
   // otherwise falls back to the deterministic local rules engine.
-  app.post("/api/dose", async (req, res) => {
+  app.post("/api/dose", async (req, res, next) => {
     try {
       const { patient, metrics, drug } = dosePayloadSchema.parse(req.body);
       console.log("[dose] request for drug", drug?.name, "aiEnabled:", AI_KEY_PRESENT);
@@ -271,22 +271,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       console.error("[dose] error", error);
-      res.status(500).json({ message: "Failed to compute dose" });
+      next(error);
     }
   });
 
   // History routes
-  app.get("/api/history", async (req, res) => {
+  app.get("/api/history", async (req, res, next) => {
     try {
       const entries = await storage.getCalculations();
       res.json(entries);
     } catch (error) {
       console.error("Error fetching history:", error);
-      res.status(500).json({ message: "Failed to fetch history" });
+      next(error);
     }
   });
 
-  app.post("/api/history", async (req, res) => {
+  app.post("/api/history", async (req, res, next) => {
     try {
       const validated = insertCalculationSchema.parse(req.body);
       const entry = await storage.createCalculation(validated);
@@ -299,17 +299,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       console.error("Error creating history entry:", error);
-      res.status(500).json({ message: "Failed to save history" });
+      next(error);
     }
   });
 
-  app.delete("/api/history", async (req, res) => {
+  app.delete("/api/history", async (req, res, next) => {
     try {
       await storage.clearCalculations();
       res.json({ message: "History cleared" });
     } catch (error) {
       console.error("Error clearing history:", error);
-      res.status(500).json({ message: "Failed to clear history" });
+      next(error);
     }
   });
 

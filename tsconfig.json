@@ -31,7 +31,7 @@
     /* Additional Checks */
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "noImplicitOverride": true,
 
     /* Interop Constraints */

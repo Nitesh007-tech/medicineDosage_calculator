@@ -20,9 +20,8 @@ export async function serveStatic(app: Express) {
   const templatePath = path.resolve(distPublicPath, "index.html");
 
   if (!fs.existsSync(distPublicPath)) {
-    throw new Error(
-      `Frontend build not found: ${distPublicPath}. Run 'yarn build' first.`
-    );
+    log(`⚠️ Frontend build not found: ${distPublicPath}. Skipping static file serving.`);
+    return;
   }
 
   // Load SSR bundle if available
