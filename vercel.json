@@ -1,24 +1,19 @@
 {
+    "version": 2,
+    "outputDirectory": "dist/public",
     "builds": [
         {
-            "src": "backend/server.ts",
+            "src": "api/index.ts",
             "use": "@vercel/node",
             "config": {
-                "nodeVersion": "24.x"
+                "includeFiles": ["shared/**", "backend/**"]
             }
         }
     ],
-    "routes": [
+    "rewrites": [
         {
-            "src": "/api/(.*)",
-            "dest": "backend/server.ts"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "backend/server.ts"
+            "source": "/api/(.*)",
+            "destination": "/api"
         }
-    ],
-    "env": {
-        "NODE_ENV": "production"
-    }
+    ]
 }

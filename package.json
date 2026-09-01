@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "tsx backend/server.ts",
     "build": "vite build && NODE_ENV=production vite build --ssr src/entry-server.tsx && node esbuild.config.mjs",
+    "vercel-build": "vite build",
     "start": "node dist/server.js",
     "check": "tsc"
   },

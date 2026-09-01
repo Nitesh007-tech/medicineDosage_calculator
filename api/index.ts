@@ -9,25 +9,57 @@ app.use(cors());
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: false, limit: "25mb" }));
 
-// Health check endpoint
-app.get("/api/health", (req: Request, res: Response) => {
+// Health check — always available, even before full init
+app.get("/api/health", (_req: Request, res: Response) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "production",
     uptime: process.uptime(),
-    version: process.env.npm_package_version || "1.0.0",
   });
 });
 
-// Register API routes
-registerRoutes(app);
+// ---------------------------------------------------------------------------
+// Lazy initialization: register routes once, even under concurrent cold starts.
+// registerRoutes() is async (it creates an http.Server internally) so we must
+// await it before handing off requests. The promise is module-level so every
+// concurrent request on a cold start waits for the same init rather than
+// triggering duplicate registration.
+// ---------------------------------------------------------------------------
+let initPromise: Promise<void> | null = null;
+let routesRegistered = false;
 
-// Error handler
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  const status = err.status || 500;
-  const message = err.message || "Internal Server Error";
-  res.status(status).json({ message });
-});
+function ensureInitialized(): Promise<void> {
+  if (routesRegistered) return Promise.resolve();
+  if (initPromise) return initPromise;
 
-export default app;
+  initPromise = (async () => {
+    await registerRoutes(app);
+
+    // Error handler MUST come after all routes
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error("[api] error:", err);
+      const status = (err as any).status || 500;
+      const message = (err as any).message || "Internal Server Error";
+      res.status(status).json({ message });
+    });
+
+    routesRegistered = true;
+  })();
+
+  return initPromise;
+}
+
+// ---------------------------------------------------------------------------
+// Default export — the handler Vercel @vercel/node expects.
+// Vercel calls this function for every incoming request to /api/*
+// ---------------------------------------------------------------------------
+export default async function handler(req: Request, res: Response) {
+  try {
+    await ensureInitialized();
+    app(req, res);
+  } catch (err) {
+    console.error("[api] initialization failed:", err);
+    res.status(500).json({ message: "Server initialization failed" });
+  }
+}
