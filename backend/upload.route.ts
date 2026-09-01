@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from 'express';
+import { Router } from 'express';
 import multer from 'multer';
 import { saveFile, deleteFile, validateFile, type UploadedFile } from './file.service';
 
@@ -16,7 +16,7 @@ const upload = multer({
  * POST /api/upload
  * Upload a file to the platform
  */
-router.post('/', upload.single('file'), async (req: any, res: Response) => {
+router.post('/', upload.single('file') as any, async (req: any, res: any) => {
     try {
         if (!req.file) {
             res.status(400).json({ error: 'No file provided' });
@@ -57,7 +57,7 @@ router.post('/', upload.single('file'), async (req: any, res: Response) => {
  * DELETE /api/upload
  * Delete a file from the platform
  */
-router.delete('/', async (req: any, res: Response) => {
+router.delete('/', async (req: any, res: any) => {
     try {
         const { key } = req.body;
 
