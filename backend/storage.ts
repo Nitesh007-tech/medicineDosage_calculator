@@ -8,6 +8,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 export interface IStorage {
   getAllUsers(): Promise<User[]>;
@@ -57,7 +58,6 @@ export class MemStorage implements IStorage {
   private users: User[] = [];
   private calculations: Calculation[] = [];
   private userIdCounter = 1;
-  private calcIdCounter = 1;
 
   async getAllUsers(): Promise<User[]> {
     return this.users;
@@ -88,7 +88,7 @@ export class MemStorage implements IStorage {
   ): Promise<Calculation | undefined> {
     const calc: Calculation = {
       ...entry,
-      id: this.calcIdCounter++,
+      id: nanoid(),  // ✅ Generate UUID-like string instead of number
       createdAt: new Date(),
     } as Calculation;
     this.calculations.push(calc);
