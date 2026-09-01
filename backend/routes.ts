@@ -7,14 +7,24 @@ import { insertUserSchema, insertCalculationSchema } from "@shared/schema";
 import { storage } from "./storage";
 import uploadRoutes from "./upload.route";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.LLM_API_KEY,
-  baseURL: process.env.LLM_BASE_URL,
-});
-
 // Whether an AI key is actually configured. When false we fall back to a
 // deterministic local rules engine so the app still produces a result.
 const AI_KEY_PRESENT = !!process.env.LLM_API_KEY;
+
+// Lazy singleton — only constructed when a valid key is present.
+// The Anthropic SDK throws at construction when apiKey is undefined,
+// which would crash the entire serverless function on cold start.
+let _anthropic: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (!_anthropic) {
+    _anthropic = new Anthropic({
+      apiKey: process.env.LLM_API_KEY!,
+      baseURL: process.env.LLM_BASE_URL,
+    });
+  }
+  return _anthropic;
+}
+
 
 const DOSE_SYSTEM_PROMPT = `You are a clinical dosing support assistant used by pharmacy staff. You are NOT a replacement for a licensed pharmacist or physician — every output must be clearly labeled as a suggestion requiring professional verification.
 
@@ -243,7 +253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       try {
-        const message = await anthropic.messages.create({
+        const message = await getAnthropic().messages.create({
           model: "claude-sonnet-4-5-20250929",
           max_tokens: 1024,
           system: DOSE_SYSTEM_PROMPT,
